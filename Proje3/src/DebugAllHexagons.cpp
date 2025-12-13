@@ -54,7 +54,7 @@ void printFullGrid(const CircularHexagonList& hexList)
             {
                 int idx = startIdx + k;
                 if (idx < count) {
-                    if (values[idx] == -1) std::cout << "^#\t";
+                    if (values[idx] == -1) std::cout << "#\t";
                     else std::cout << values[idx] << "\t";
                 } else {
                     std::cout << " \t"; // Liste bittiyse boşluk
@@ -75,7 +75,7 @@ void printFullGrid(const CircularHexagonList& hexList)
                 if (idx >= count) {
                     std::cout << " \t"; // Henüz o indekste veri yoksa (Padding)
                 } else {
-                    if (values[idx] == -1) std::cout << "^#\t";
+                    if (values[idx] == -1) std::cout << "#\t";
                     else std::cout << values[idx] << "\t";
                 }
             }

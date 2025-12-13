@@ -45,7 +45,7 @@ void loadDataFromFile(const char* fileName, CircularHexagonList& hexList)
     }
 
     ConsolePrinter::clearScreen();
-    // İlk durumu göster (Boş oldukları için ^# basılacak)
+    // İlk durumu göster (Boş oldukları için # basılacak)
     hexList.printWindowAsSnake(hexList.getHead());
 
     std::cout << "Verileri okumak icin bir tusa basin..." << std::endl;
