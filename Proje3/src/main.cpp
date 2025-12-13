@@ -3,13 +3,13 @@
 #include <sstream>
 #include <cstdlib>
 #include <cmath>
-#include <limits> // numeric_limits için
-#include <windows.h> // Sleep fonksiyonu için
+#include <limits>
+#include <windows.h>
 #include "BinarySearchTree.hpp"
 #include "CircularHexagonList.hpp"
 #include "ConsolePrinter.hpp"
 
-// Dosya okuma ve 18'li paketler halinde gorsellestirme fonksiyonu
+// Dosya okuma ve görselleştirme fonksiyonu
 void loadDataFromFile(const char* fileName, CircularHexagonList& hexList)
 {
     std::string filePath = fileName;
@@ -25,7 +25,7 @@ void loadDataFromFile(const char* fileName, CircularHexagonList& hexList)
         return;
     }
 
-    // 1. ADIM: Satır sayısını bularak toplam altıgen sayısını hesapla
+    // --- ADIM 1: ÖN HESAPLAMA VE BOŞ GÖSTERİM ---
     int lineCount = 0;
     std::string line;
     while (std::getline(fileCheck, line)) {
@@ -39,27 +39,24 @@ void loadDataFromFile(const char* fileName, CircularHexagonList& hexList)
 
     int totalHexagons = (int)std::ceil((double)lineCount / 6.0);
 
-    // 2. ADIM: Boş altıgenleri önceden oluştur
+    // Boş altıgenleri oluştur
     for (int i = 0; i < totalHexagons; i++) {
         hexList.createAndAppendHexagon();
     }
 
-    // İlk boş durumu (ilk 18'li) ekrana bas
     ConsolePrinter::clearScreen();
-    std::cout << "Dosya okuma baslatiliyor..." << std::endl;
-    std::cout << "Toplam Altigen Kapasitesi: " << totalHexagons << std::endl;
-    
-    Hexagon* windowStart = hexList.getHead();
-    hexList.printWindowAsSnake(windowStart);
+    // İlk durumu göster (Boş oldukları için ^# basılacak)
+    hexList.printWindowAsSnake(hexList.getHead());
 
-    // Kullanıcı ilk boş ekranı görsün diye bekleme
-    Sleep(100);
+    std::cout << "Verileri okumak icin bir tusa basin..." << std::endl;
+    std::cin.get(); // Kullanıcıdan tuş bekle
 
-    // 3. ADIM: Dosyayı tekrar aç ve verileri doldur
+    // --- ADIM 2: VERİ YÜKLEME VE CANLI GÜNCELLEME ---
     std::ifstream file(filePath.c_str());
     Hexagon* currentHex = hexList.getHead(); 
     int treesInCurrentHex = 0;
     int hexFilledCount = 0;
+    Hexagon* windowStart = hexList.getHead();
 
     while (std::getline(file, line))
     {
@@ -79,20 +76,17 @@ void loadDataFromFile(const char* fileName, CircularHexagonList& hexList)
             currentHex->addTree(tree);
             treesInCurrentHex++;
 
-            // Eğer altıgen dolduysa (6 ağaç)
+            // Altıgen dolunca güncelleme yap
             if (treesInCurrentHex >= 6) {
-                
                 hexFilledCount++;
 
-                // Her 18 altıgen dolduğunda ekranı güncelle
+                // Her 18 altıgende bir ekranı yenile
                 if (hexFilledCount % 18 == 0) {
                     ConsolePrinter::clearScreen();
                     std::cout << "Veri yukleniyor... (" << hexFilledCount << " / " << totalHexagons << " altigen doldu)" << std::endl;
-                    
                     hexList.printWindowAsSnake(windowStart);
                     
-                    // --- GÜNCELLEME 1: YAVAŞLATILMIŞ GÖSTERİM ---
-                    // Değişimi gözle görebilmek için 300 ms bekleme
+                    // YAVAŞLATILMIŞ GÖSTERİM (300ms)
                     Sleep(300);
                     
                     windowStart = currentHex->getNext();
@@ -107,7 +101,7 @@ void loadDataFromFile(const char* fileName, CircularHexagonList& hexList)
     // Son kalan kısmı göster
     if (hexFilledCount % 18 != 0 || treesInCurrentHex > 0) {
          ConsolePrinter::clearScreen();
-         std::cout << "Veri yukleme tamamlanmak uzere..." << std::endl;
+         std::cout << "Veri yukleme tamamlandi." << std::endl;
          hexList.printWindowAsSnake(windowStart);
          Sleep(500);
     }
@@ -119,7 +113,7 @@ int main()
 {
     CircularHexagonList hexList;
 
-    // 1) Verileri oku ve animasyonlu göster
+    // 1. Veri Okuma ve Animasyon
     loadDataFromFile("Data.txt", hexList);
 
     if (hexList.getHexagonCount() == 0) {
@@ -127,38 +121,32 @@ int main()
         return 0; 
     }
 
-    // Okuma bitti, başa dön
+    // Okuma bitti, en başa dön
     ConsolePrinter::clearScreen();
-    std::cout << "Tum veriler yuklendi. Baslangic Durumu:" << std::endl;
+    std::cout << "Tum veriler hazir. Baslangic Durumu:" << std::endl;
     hexList.printWindowAsSnake(hexList.getHead());
 
-    // --- GÜNCELLEME 2: TUR SAYISI GİRİŞİ ve KONTROLÜ ---
+    // 2. Tur Sayısı Girişi (Sadece Sayı Kontrolü)
     int totalTurns = 0;
-    
     while (true) {
         std::cout << "Tur sayisini giriniz : ";
         if (std::cin >> totalTurns) {
             if (totalTurns > 0) {
-                break; // Geçerli bir sayı girildi
+                break;
             } else {
                 std::cout << "Lutfen 0'dan buyuk bir sayi giriniz." << std::endl;
             }
         } else {
-            // Hatalı giriş (harf vb.) durumunda akışı temizle
             std::cout << "Hatali giris! Lutfen sadece sayi giriniz." << std::endl;
             std::cin.clear();
             std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
         }
     }
     
-    // Enter karakterini temizle (gerekirse)
-    // std::cin.ignore(); 
+    // Enter tuşunu temizle
+    std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
 
-    // --- GÜNCELLEME 3: DİREKT BAŞLAMA ---
-    // "Baslamak icin tusa basin" kısmı kaldırıldı.
-    // Kullanıcı sayıyı girip Enter'a basınca direkt döngü başlar.
-
-    // 3) Tur Döngüsü
+    // 3. Simülasyonu Başlat (Direkt Geçiş)
     for (int i = 1; i <= totalTurns; i++)
     {
         hexList.processTurn(i);
@@ -167,10 +155,14 @@ int main()
         std::cout << "Tur : " << i << std::endl;
         hexList.printWindowAsSnake(hexList.getHead());
         
-        // Tur geçişlerinde hafif bekleme (100 ms)
+        // Tur geçiş hızı (100ms)
         Sleep(100);
     }
 
     std::cout << "Tum turlar tamamlandi. Program sonu." << std::endl;
+    
+    // BURADAKİ BEKLEME KALDIRILDI:
+    // std::cin.get(); 
+    
     return 0;
 }
