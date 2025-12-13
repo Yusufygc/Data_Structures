@@ -37,3 +37,14 @@ debug_dagitim_bagla: ./lib/TreeNode.o ./lib/BinarySearchTree.o ./lib/Hexagon.o .
 
 debug_dagitim: derle ./lib/DebugDistribution.o debug_dagitim_bagla
 	./bin/debug_dagitim
+
+# --- DEBUG FULL GRID ---
+./lib/DebugAllHexagons.o: ./src/DebugAllHexagons.cpp
+	g++ -c -I "./include" ./src/DebugAllHexagons.cpp -o ./lib/DebugAllHexagons.o
+
+debug_full_bagla: ./lib/TreeNode.o ./lib/BinarySearchTree.o ./lib/Hexagon.o ./lib/CircularHexagonList.o ./lib/ConsolePrinter.o ./lib/NodeStack.o ./lib/DebugAllHexagons.o
+	g++ ./lib/TreeNode.o ./lib/BinarySearchTree.o ./lib/Hexagon.o ./lib/CircularHexagonList.o ./lib/ConsolePrinter.o ./lib/NodeStack.o ./lib/DebugAllHexagons.o -o ./bin/debug_full
+
+# Çalıştırmak için: mingw32-make debug_full_run
+debug_full_run: derle ./lib/DebugAllHexagons.o debug_full_bagla
+	./bin/debug_full

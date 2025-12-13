@@ -44,6 +44,8 @@ public:
     // --- YENİ EKLENEN FONKSİYON ---
     // Proje isterine göre o altıgenin ekrana basılacak değerini hesaplar.
     int calculateSpecialDisplayValue() const;
+
+    void removeTreeAt(int index);
 };
 
 #endif
