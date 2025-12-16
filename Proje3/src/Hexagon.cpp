@@ -1,11 +1,21 @@
+/**
+* @file Hexagon.cpp
+* @description : Altıgen (Kuyruk) yapısının işlevlerini gerçekleştiren kaynak dosya.
+* Ağaç ekleme, öncelikli ağacı bulma ve verileri dağıtma mantığını burada kodladım.
+* @course      : 1.Öğretim C grubu
+* @assignment  : 2.Ödev
+* @date        : 03.12.2025-14.12.2025
+* @author      : Muhammed Yusuf YAĞCI B211210017
+*/
+
 #include "Hexagon.hpp"
 #include <iostream>
 
-// Kurucu: başlangıçta hiç ağaç yok.
+// Kurucu: Dizi elemanlarını ve değişkenleri sıfırladım ki çöp değer kalmasın.
 Hexagon::Hexagon()
 {
     treeCount = 0;
-    frontIndex = 0;
+    frontIndex = 0; // FIFO mantığı için başı 0 kabul ettim.
     next = 0;
 
     for (int i = 0; i < MAX_TREES; i++)
@@ -14,7 +24,7 @@ Hexagon::Hexagon()
     }
 }
 
-// Yıkıcı: içindeki tüm ağaçları temizler.
+// Yıkıcı: Altıgen silinirken içindeki ağaçları da bellekten sildim.
 Hexagon::~Hexagon()
 {
     for (int i = 0; i < treeCount; i++)
@@ -28,72 +38,25 @@ Hexagon::~Hexagon()
     treeCount = 0;
 }
 
-// Hexagon dolu mu? (en fazla 6 ağaç)
-bool Hexagon::isFull() const
+// ==========================================================
+// YARDIMCI FONKSİYONLAR
+// ==========================================================
+
+// Öncelikli kuyruk (Priority Queue) mantığını burada kurdum.
+// Tüm ağaçları tek tek gezerek yüksekliği (Height) en fazla olanı buluyorum.
+int Hexagon::findMaxHeightTreeIndex() const
 {
-    return treeCount >= MAX_TREES;
-}
+    if (isEmpty()) return -1;
 
-// Hexagon boş mu?
-bool Hexagon::isEmpty() const
-{
-    // İçinde hiç ağaç yoksa boştur.
-    // Ancak ağaçlar var ama hepsi boşsa da boş sayılabilir.
-    // Şimdilik sadece ağaç varlığına bakıyoruz.
-    return treeCount == 0;
-}
-
-// Kuyruğun sonuna ağaç ekler. Başarılı ise true döner.
-bool Hexagon::addTree(BinarySearchTree* tree)
-{
-    if (isFull())
-    {
-        return false;
-    }
-
-    trees[treeCount] = tree;
-    treeCount++;
-
-    return true;
-}
-
-// Normal kuyruk mantığı: frontIndex'teki ağacı döndürür ve hexagondan çıkarır.
-BinarySearchTree* Hexagon::popNormalTree()
-{
-    if (isEmpty())
-    {
-        return 0;
-    }
-
-    // Önden çıkacak ağaç her zaman index 0'daki olsun diye diziyi kaydırıyoruz.
-    BinarySearchTree* frontTree = trees[0];
-
-    for (int i = 1; i < treeCount; i++)
-    {
-        trees[i - 1] = trees[i];
-    }
-
-    trees[treeCount - 1] = 0;
-    treeCount--;
-
-    return frontTree;
-}
-
-// Öncelikli ağaç (En yüksek olan)
-BinarySearchTree* Hexagon::popPriorityTree()
-{
-    if (isEmpty()) return 0;
-
-    // En yüksek ağacı bul
     int maxH = -1;
     int targetIndex = 0;
 
     for (int i = 0; i < treeCount; i++)
     {
-        // BinarySearchTree sınıfında getHeight() metodu olduğunu varsayıyoruz.
-        // Eşitlik durumunda, kuyruk mantığı gereği öndeki (daha eski giren) alınır.
-        if (trees[i] != 0) {
+        // Boş olmayan ağaçları kontrol ettim.
+        if (trees[i] != 0 && !trees[i]->isEmpty()) {
             int h = trees[i]->getHeight();
+            // Eğer daha yüksek bir ağaç bulursam onu seçtim.
             if (h > maxH)
             {
                 maxH = h;
@@ -101,136 +64,147 @@ BinarySearchTree* Hexagon::popPriorityTree()
             }
         }
     }
+    return targetIndex;
+}
 
-    BinarySearchTree* targetTree = trees[targetIndex];
+// Ekrana yazılacak değeri hesaplayan fonksiyon.
+// Normal kuyruğun başındaki (0. indeks) ve en yüksek ağacın kökünü kullandım.
+int Hexagon::getRawValueDivisor() const
+{
+    // Normal Kök (Sıradaki ilk ağaç)
+    int normalRoot = 0;
+    if (treeCount > 0 && trees[0] != 0 && !trees[0]->isEmpty()) {
+        normalRoot = trees[0]->getRootValue();
+    }
 
-    // Kaydırma işlemi (aradan çıkarma)
-    for (int i = targetIndex + 1; i < treeCount; i++)
+    // Öncelikli Kök (En yüksek ağaç)
+    int priorityIndex = findMaxHeightTreeIndex();
+    int priorityRoot = 1;
+
+    if (priorityIndex != -1 && trees[priorityIndex] != 0) {
+        priorityRoot = trees[priorityIndex]->getRootValue();
+    }
+
+    // Bölme işleminde payda 0 olursa program çöker (Divide by Zero).
+    // O yüzden eğer kök 0 ise onu 1 yaptım.
+    if (priorityRoot == 0) priorityRoot = 1;
+
+    return normalRoot / priorityRoot;
+}
+
+// Bir ağacı diziden silip, dizide oluşan boşluğu kaydırma yöntemiyle kapattım.
+BinarySearchTree* Hexagon::removeTreeAtIndex(int index)
+{
+    if (index < 0 || index >= treeCount) return 0;
+
+    // Hedef ağacı kaybetmemek için bir değişkene aldım.
+    BinarySearchTree* targetTree = trees[index];
+
+    // Sildiğim elemandan sonrakileri birer adım sola kaydırdım.
+    // Böylece dizide arada boşluk kalmadı.
+    for (int i = index + 1; i < treeCount; i++)
     {
         trees[i - 1] = trees[i];
     }
+    
+    // Son elemanı boşa çıkardım ve sayıyı azalttım.
     trees[treeCount - 1] = 0;
     treeCount--;
 
     return targetTree;
 }
+//==========================================================
 
-// Belirli indeksteki (0..treeCount-1) ağaca eriş.
-BinarySearchTree* Hexagon::getTreeAt(int index) const
+bool Hexagon::isFull() const
 {
-    if (index < 0 || index >= treeCount)
-    {
-        return 0;
-    }
-    return trees[index];
+    return treeCount >= MAX_TREES;
 }
 
-// Öncelikli ağaç senaryosu için belirli indeksteki ağacı diziden çıkarır (delete etmez).
-void Hexagon::removeTreeAt(int index)
+bool Hexagon::isEmpty() const
 {
-    if (index < 0 || index >= treeCount)
-    {
-        return;
-    }
-
-    for (int i = index + 1; i < treeCount; i++)
-    {
-        trees[i - 1] = trees[i];
-    }
-
-    trees[treeCount - 1] = 0;
-    treeCount--;
+    return treeCount == 0;
 }
 
-// Dışarıdan gelen veri yığınını, mevcut ağaçlara sırayla ekler.
+bool Hexagon::addTree(BinarySearchTree* tree)
+{
+    if (isFull()) return false;
+
+    trees[treeCount] = tree;
+    treeCount++;
+    return true;
+}
+
+// Tek turlarda: Sıradaki ilk elemanı (0. indeks) çıkardım.
+BinarySearchTree* Hexagon::popNormalTree()
+{
+    if (isEmpty()) return 0;
+    return removeTreeAtIndex(0);
+}
+
+// Çift turlarda: En yüksek ağacı (Priority) bulup çıkardım.
+BinarySearchTree* Hexagon::popPriorityTree()
+{
+    if (isEmpty()) return 0;
+    // Hangi ağacın öncelikli olduğunu buldum.
+    int targetIndex = findMaxHeightTreeIndex();
+    return removeTreeAtIndex(targetIndex);
+}
+
+// Diğer altıgenden gelen verileri bu altıgendeki ağaçlara dağıttığım fonksiyon.
 void Hexagon::distributeValues(int* values, int count)
 {
     if (count <= 0) return;
 
-    // --- KRİTİK DÜZELTME: EĞER HİÇ AĞAÇ YOKSA YENİ BİR TANE EKLE ---
-    // Böylece veriler kaybolmaz, yeni bir ağaçta toplanır.
+    // Güvenlik önlemi: Hiç ağaç yoksa bir tane ekledim ki dağıtacak yer olsun.
     if (treeCount == 0) {
         addTree(new BinarySearchTree());
     }
 
-    // "kuyruğun önünden başlayıp sonuna doğru... teker teker"
+    // Dağıtımı sadece mevcut olan ağaçlara yapıyorum, yeni eklenenlere değil.
+    int limitIndex = treeCount; 
     int currentTreeIdx = 0;
 
     for (int i = 0; i < count; i++)
     {
-        // Eğer o anki indisteki ağaç null ise (olmamalı ama güvenlik)
+        // Olası bir hata durumunda (slot boşsa) kontrol ettim.
         if (trees[currentTreeIdx] == 0) {
-             // Yer varsa yeni ağaç ekle, yoksa başa dön
-             if (!isFull()) {
-                 addTree(new BinarySearchTree());
-             } else {
-                 // Full ise ve null ise bir hata vardır, 0. indekse dön
-                 currentTreeIdx = 0;
-             }
+            if (!isFull()) {
+                addTree(new BinarySearchTree());
+            } else {
+                currentTreeIdx = 0; // Yer yoksa başa döndüm.
+            }
+        }
+        
+        // Değeri ağaca ekledim.
+        if (trees[currentTreeIdx] != 0) {
+             trees[currentTreeIdx]->insert(values[i]);
         }
 
-        trees[currentTreeIdx]->insert(values[i]);
-        
+        // Round-Robin (Sırayla) dağıtım mantığı.
+        // Bir sonrakine geçtim, eğer son ağaca geldiysem tekrar başa döndüm.
         currentTreeIdx++;
-        // Dairesel dağıtım (aynı altıgen içindeki ağaçlar arasında)
-        if (currentTreeIdx >= treeCount)
+        
+        if (currentTreeIdx >= limitIndex)
         {
             currentTreeIdx = 0;
         }
     }
 }
 
-// Ekranda "kuyruktan çıkacak ağacın" kök değeri.
-// YENİ MANTIK: Kendi içindeki (Baş / Max) değerini hesaplar.
+
 int Hexagon::calculateSpecialDisplayValue() const
 {
     if (isEmpty()) return 0;
-
-    // 1. PAY (Numerator): Kuyruğun başındaki (index 0) ağacın kökü
-    int numerator = 0;
-    if (trees[0] != 0 && !trees[0]->isEmpty()) {
-        numerator = trees[0]->getRootValue();
-    }
-
-    // 2. PAYDA (Denominator): Bu altıgendeki EN YÜKSEK (Öncelikli) ağacın kökü
-    int maxH = -1;
-    int denominator = 1; // 0'a bölme hatası olmasın
-
-    for (int i = 0; i < treeCount; i++)
-    {
-        if (trees[i] != 0 && !trees[i]->isEmpty()) {
-            int h = trees[i]->getHeight();
-            // Yükseklik daha büyükse yeni öncelikli budur
-            if (h > maxH) {
-                maxH = h;
-                denominator = trees[i]->getRootValue();
-            }
-        }
-    }
-
-    if (denominator == 0) return 0; 
-
-    // Tam sayı bölmesi
-    return numerator / denominator;
+    return getRawValueDivisor();
 }
 
-// Eski fonksiyon (uyumluluk için)
-int Hexagon::getDisplayRootValue() const
-{
-    return calculateSpecialDisplayValue();
-}
 
-int Hexagon::getTreeCount() const
-{
-    return treeCount;
-}
+// Bağlı liste için sonraki düğüm işlemleri.
+Hexagon* Hexagon::getNext() const { return next; }
+void Hexagon::setNext(Hexagon* nextHexagon) { next = nextHexagon; }
 
-Hexagon* Hexagon::getNext() const
-{
-    return next;
-}
+int Hexagon::getTreeCount() const { return treeCount; }
 
-void Hexagon::setNext(Hexagon* nextHexagon)
-{
-    next = nextHexagon;
-}
+
+
+

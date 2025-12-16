@@ -1,21 +1,30 @@
+/**
+* @file BinarySearchTree.cpp
+* @description : İkili Arama Ağacı (BST) sınıfının fonksiyon gövdelerini içeren dosya.
+* Ağaca ekleme, silme, postorder dolaşma gibi işlemleri burada gerçekleştirdim.
+* @course      : 1.Öğretim C grubu
+* @assignment  : 2.Ödev
+* @date        : 03.12.2025-14.12.2025
+* @author      : Muhammed Yusuf YAĞCI B211210017
+*/
+
 #include "BinarySearchTree.hpp"
 #include "NodeStack.hpp"
-#include <iostream> // Debug çıktıları için kullanacağız.
+#include <iostream>
 
-// Kurucu: başlangıçta ağaç boş.
+
 BinarySearchTree::BinarySearchTree()
 {
-    root = 0;
-    nodeCount = 0;
+    root = 0;       
+    nodeCount = 0;  
 }
 
-// Yıkıcı: tüm düğümleri serbest bırak.
 BinarySearchTree::~BinarySearchTree()
 {
     clearIterative();
 }
 
-// Ağaçtaki tüm düğümleri recursive olarak siler.
+// Yardımcı fonksiyon: Verilen düğümü ve altındakileri recursive olarak sildim.
 void BinarySearchTree::destroyRecursive(TreeNode* node)
 {
     if (node == 0)
@@ -23,23 +32,26 @@ void BinarySearchTree::destroyRecursive(TreeNode* node)
         return;
     }
 
+    // Önce çocukları sildim, sonra düğümün kendisini sildim (Postorder mantığı).
     destroyRecursive(node->left);
     destroyRecursive(node->right);
     delete node;
 }
 
-// Dışarıdan insert çağrısı.
+// Dışarıdan çağrılan ekleme fonksiyonu. İşlemi recursive yardımcıya devrettim.
 void BinarySearchTree::insert(int value)
 {
     root = insertRecursive(root, value);
 }
 
-// BST ekleme kuralı: < sol, > sağ, == sol (özelleştirilmiş kural).
+// Recursive ekleme mantığını burada kurdum.
+// Kural: Küçükse sola, büyükse sağa, eşitse sola ekledim (Proje isteri).
 TreeNode* BinarySearchTree::insertRecursive(TreeNode* node, int value)
 {
+    // Eğer yer boşsa yeni düğümü burada oluşturdum.
     if (node == 0)
     {
-        nodeCount++;
+        nodeCount++; // Toplam düğüm sayısını artırdım.
         TreeNode* newNode = new TreeNode(value);
         return newNode;
     }
@@ -54,14 +66,14 @@ TreeNode* BinarySearchTree::insertRecursive(TreeNode* node, int value)
     }
     else
     {
-        // value == node->value durumu: sol tarafa ekle.
+        // Eşitlik durumu: Proje kuralı gereği sol tarafa ekleme yaptım.
         node->left = insertRecursive(node->left, value);
     }
 
     return node;
 }
 
-// Kök değeri (ağaç boşsa -1 döndürüyoruz; sen istersen başka sentinel de seçebilirsin).
+// Ağacın kök değerini döndürdüm. Ağaç boşsa hata kodu olarak -1 döndürdüm.
 int BinarySearchTree::getRootValue() const
 {
     if (root == 0)
@@ -71,18 +83,19 @@ int BinarySearchTree::getRootValue() const
     return root->value;
 }
 
-// Yükseklik hesaplama (boş ağaç için 0).
+// Ağacın yüksekliğini hesaplamak için yardımcı fonksiyonu çağırdım.
 int BinarySearchTree::getHeight() const
 {
     return heightRecursive(root);
 }
 
-// Recursive yükseklik fonksiyonu.
+// Yüksekliği recursive olarak hesapladım.
+// Her düğüm için sol ve sağın yüksekliğine bakıp büyük olanı seçtim ve 1 ekledim.
 int BinarySearchTree::heightRecursive(TreeNode* node) const
 {
     if (node == 0)
     {
-        return 0;
+        return 0; // Boş düğümün yüksekliği 0.
     }
 
     int leftHeight = heightRecursive(node->left);
@@ -98,24 +111,25 @@ int BinarySearchTree::heightRecursive(TreeNode* node) const
     }
 }
 
-// Node sayısı (debug ve extract için faydalı).
+// toplam düğüm sayısı
 int BinarySearchTree::getNodeCount() const
 {
     return nodeCount;
 }
 
-// Ağaç boş mu?
+// Ağacın boş olup olmadığının kontrolu 
 bool BinarySearchTree::isEmpty() const
 {
     return root == 0;
 }
 
-// Bütün verileri postorder sıralama ile buffer'a yazar ve ağacı tamamen boşaltır.
-// buffer kapasitesini aşmamak için maxCount kullanılır.
+// Projenin en kritik fonksiyonlarından biri.
+// Ağaçtaki tüm verileri Postorder sırayla alıp buffer dizisine kaydettim ve düğümleri sildim.
 void BinarySearchTree::extractAllPostOrder(int* buffer, int maxCount, int& outCount)
 {
     outCount = 0;
 
+    // Ağaç boşsa veya buffer yoksa işlem yapmadan çıktım.
     if (root == 0 || maxCount <= 0)
     {
         return;
@@ -123,13 +137,12 @@ void BinarySearchTree::extractAllPostOrder(int* buffer, int maxCount, int& outCo
 
     extractPostOrderRecursive(root, buffer, outCount);
 
-    // Bütün düğümleri sildikten sonra kökü sıfırla.
+    // İşlem bitince ağacı tamamen sıfırladım.
     root = 0;
     nodeCount = 0;
 }
 
-// Postorder: sol, sağ, kök.
-// Her düğüm için değeri buffer'a yazıp düğümü sileriz.
+// Postorder dolaşma (Sol -> Sağ -> Kök) mantığıyla verileri alıp sildim.
 void BinarySearchTree::extractPostOrderRecursive(TreeNode* node, int* buffer, int& index)
 {
     if (node == 0)
@@ -137,16 +150,20 @@ void BinarySearchTree::extractPostOrderRecursive(TreeNode* node, int* buffer, in
         return;
     }
 
+    // Önce sol ve sağ alt ağaçları işledim.
     extractPostOrderRecursive(node->left, buffer, index);
     extractPostOrderRecursive(node->right, buffer, index);
 
-    // Kökteyiz: değeri buffer'a koy.
+    // En son kök düğümün verisini buffer'a aldım.
     buffer[index] = node->value;
     index++;
 
+    // Veriyi aldıktan sonra düğümü bellekten sildim.
     delete node;
 }
 
+// Ağacı iteratif (döngüsel) olarak temizlemek için bu fonksiyonu yazdım.
+// Recursive yerine kendi yazdığım Stack yapısını kullandım.
 void BinarySearchTree::clearIterative()
 {
     if (root == 0)
@@ -155,7 +172,8 @@ void BinarySearchTree::clearIterative()
         return;
     }
 
-    // Postorder delete için 2 stack tekniği (rekürsiyonsuz).
+    // Postorder silme işlemi için iki stack yöntemini kullandım.
+    // Çünkü recursive silme çok derin ağaçlarda stack overflow yapabilir.
     NodeStack s1(128);
     NodeStack s2(128);
 
@@ -173,7 +191,7 @@ void BinarySearchTree::clearIterative()
     while (!s2.isEmpty())
     {
         TreeNode* n = s2.pop();
-        delete n;
+        delete n; // Düğümleri burada sildim.
     }
 
     root = 0;

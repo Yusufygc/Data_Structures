@@ -1,5 +1,16 @@
+/**
+* @file CircularHexagonList.cpp
+* @description : Dairesel Altıgen Listesi sınıfının kaynak dosyası.
+* Altıgenleri birbirine bağlama, tur işlemlerini yönetme ve veri dağıtım algoritmalarını burada kodladım.
+* @course      : 1.Öğretim C grubu
+* @assignment  : 2.Ödev
+* @date        : 03.12.2025-14.12.2025
+* @author      : Muhammed Yusuf YAĞCI B211210017
+*/
+
 #include "CircularHexagonList.hpp"
 #include <iostream>
+
 
 CircularHexagonList::CircularHexagonList()
 {
@@ -7,12 +18,14 @@ CircularHexagonList::CircularHexagonList()
     hexagonCount = 0;
 }
 
+// Yıkıcı fonksiyon: Program kapanırken bellek sızıntısı olmaması için
+// dairesel listeyi tek tek dolaşıp tüm altıgenleri sildim.
 CircularHexagonList::~CircularHexagonList()
 {
     if (head == 0) return;
     
-    // Dairesel listede tüm altıgenleri dolaşıp sil.
     Hexagon* current = head;
+    // Dairesel olduğu için sonsuz döngüye girmesin diye sayı kadar döndürdüm.
     for (int i = 0; i < hexagonCount; i++)
     {
         Hexagon* next = current->getNext();
@@ -24,233 +37,158 @@ CircularHexagonList::~CircularHexagonList()
     hexagonCount = 0;
 }
 
-// Yeni altıgen oluşturup listeye ekler, dairesel bağlantıyı korur.
+// Listeye yeni bir altıgen eklemek için bu fonksiyonu yazdım.
+// Listenin boş olup olmamasına göre dairesel bağlantıyı kurdum.
 Hexagon* CircularHexagonList::createAndAppendHexagon()
 {
     Hexagon* newHex = new Hexagon();
 
     if (head == 0)
     {
+        // İlk elemansa kendisine bağladım (Dairesel yapı başlangıcı).
         head = newHex;
-        head->setNext(head); // Tek elemanlı dairesel liste.
+        head->setNext(head);
     }
     else
     {
-        // Son elemanı (next'i head olan elemanı) bulana kadar git.
+        // Liste doluysa son elemanı bulup yeni elemanı araya ekledim.
         Hexagon* current = head;
         while (current->getNext() != head)
         {
             current = current->getNext();
         }
-
-        // current şu an gerçek son altıgen.
         current->setNext(newHex);
-        newHex->setNext(head); // Daireselliği koru.
+        newHex->setNext(head); 
     }
 
     hexagonCount++;
     return newHex;
 }
 
+// Liste başındaki elemanı döndürür
 Hexagon* CircularHexagonList::getHead() const
 {
     return head;
 }
 
+// Toplam altıgen sayısını döndürür
 int CircularHexagonList::getHexagonCount() const
 {
     return hexagonCount;
 }
 
-// Mantıksal olarak bir sonraki altıgen (dairede sağ komşu).
-Hexagon* CircularHexagonList::getRightNeighbor(Hexagon* current) const
+// ==========================================================
+// YARDIMCI FONKSİYONLAR
+// ==========================================================
+
+// Tur mantığına göre ağaçları çıkardığım ve yerine yenisini koyduğum fonksiyon.
+void CircularHexagonList::collectTreesAndReplace(int turnNumber, int** dataBuffers, int* dataCounts)
 {
-    if (current == 0)
-    {
-        return 0;
-    }
-
-    return current->getNext();
-}
-
-// Tur işlemlerini (çıkarma, silme, dağıtma) yöneten fonksiyon
-void CircularHexagonList::processTurn(int turnNumber)
-{
-    if (head == 0) return;
-
-    // Geçici veri saklama yapısı
-    int totalHex = hexagonCount;
-    int** dataBuffers = new int*[totalHex];
-    int* dataCounts = new int[totalHex];
-
-    for(int i=0; i<totalHex; i++) {
-        dataBuffers[i] = 0;
-        dataCounts[i] = 0;
-    }
-
-    // 1. ADIM: Her altıgenden uygun ağacı çıkar ve verilerini al (Extract)
     Hexagon* current = head;
-    bool isOddTurn = (turnNumber % 2 != 0); // Tek turlar: 1, 3, 5... (Normal Tree)
+    // Tur sayısının tek mi çift mi olduğunun kontrolü
+    bool isOddTurn = (turnNumber % 2 != 0);
 
-    for (int i = 0; i < totalHex; i++)
+    for (int i = 0; i < hexagonCount; i++)
     {
         BinarySearchTree* removedTree = 0;
-
-        if (isOddTurn)
-        {
-            // Tek turlar: Normal kuyruk mantığı (baştaki ağaç)
+        
+        // Tek turlarda baştaki (Normal), Çift turlarda en yüksek (Priority) ağacı seçtim.
+        if (isOddTurn) {
             removedTree = current->popNormalTree();
-        }
-        else
-        {
-            // Çift turlar: Öncelikli kuyruk (yüksekliği en fazla olan)
+        } else {
             removedTree = current->popPriorityTree();
         }
 
         if (removedTree != 0)
         {
-            // Ağaçtaki düğüm sayısını al
+            // Çıkarılan ağacın verilerini Postorder mantığıyla aldım.
             int count = removedTree->getNodeCount();
             if (count > 0)
             {
-                dataBuffers[i] = new int[count];
+                dataBuffers[i] = new int[count]; 
                 int outCount = 0;
-                // Postorder extract: Verileri al ve ağacı boşalt
                 removedTree->extractAllPostOrder(dataBuffers[i], count, outCount);
                 dataCounts[i] = outCount;
             }
-            // Ağacın kendisini bellekten sil
+            
+            // İşimi bitirince ağacı sildim.
             delete removedTree; 
-        }
+            removedTree = 0;
 
+            // BURASI ÖNEMLİ: Kuyruktaki ağaç sayısı azalmasın diye çıkardığımın yerine
+            // hemen boş bir ağaç ekledim. Böylece yapı bozulmadı.
+            if (!current->isFull()) 
+            {
+                current->addTree(new BinarySearchTree());
+            }
+        }
+        
         current = current->getNext();
     }
+}
 
-    // 2. ADIM: Alınan verileri bir sonraki (sağdaki) altıgene dağıt
-    current = head;
-    for (int i = 0; i < totalHex; i++)
+// Topladığım verileri bir sonraki (sağdaki) komşuya dağıttığım fonksiyon.
+void CircularHexagonList::distributeToNeighbors(int** dataBuffers, int* dataCounts)
+{
+    Hexagon* current = head;
+    
+    for (int i = 0; i < hexagonCount; i++)
     {
-        // i. altıgenden çıkan veri (dataBuffers[i]), current->getNext()'e (sağındakine) eklenir.
         Hexagon* targetHex = current->getNext();
         
+        // Eğer bu turda bu altıgenden veri çıktıysa dağıtım yaptım.
         if (dataBuffers[i] != 0 && dataCounts[i] > 0)
         {
             targetHex->distributeValues(dataBuffers[i], dataCounts[i]);
             
-            // Kullanılan tamponu temizle
-            delete[] dataBuffers[i];
+            // Dağıtım bitince geçici belleği temizledim.
+            delete[] dataBuffers[i]; 
+            dataBuffers[i] = 0;
         }
-
+        
         current = current->getNext();
     }
+}
 
+// Güvenlik amacıyla oluşturduğum temizlik fonksiyonu.
+void CircularHexagonList::cleanUpBuffers(int** dataBuffers, int* dataCounts, int size)
+{
+    // Olası silinmemiş buffer kalıntılarını kontrol edip sildim.
+    for(int i = 0; i < size; i++) {
+        if (dataBuffers[i] != 0) {
+            delete[] dataBuffers[i];
+            dataBuffers[i] = 0;
+        }
+    }
     delete[] dataBuffers;
     delete[] dataCounts;
 }
 
-// Global en yüksek ağaç kök değerini bulur
-int CircularHexagonList::findGlobalMaxHeightRootValue() const
-{
-    if (head == 0) return 1;
+// ==========================================================
+// ANA SÜREÇ FONKSİYONU
+// ==========================================================
 
-    int maxHeight = 0;
-    int rootValueOfMax = 1;
-
-    Hexagon* current = head;
-
-    for (int i = 0; i < hexagonCount; i++)
-    {
-        for (int t = 0; t < current->getTreeCount(); t++)
-        {
-            BinarySearchTree* tree = current->getTreeAt(t);
-            if (tree != 0 && !tree->isEmpty())
-            {
-                int h = tree->getHeight();
-                if (h > maxHeight)
-                {
-                    maxHeight = h;
-                    rootValueOfMax = tree->getRootValue();
-                }
-            }
-        }
-        current = current->getNext();
-    }
-
-    if (maxHeight == 0) return 1;
-    return rootValueOfMax;
-}
-
-// Ekrana basılacak 18'lik pencereyi yılan formasyonunda ve çizgili çerçeve ile yazdırır.
-void CircularHexagonList::printWindowAsSnake(Hexagon* windowStart) const
-{
-    if (windowStart == 0)
-    {
-        std::cout << "Gosterilecek altigen yok." << std::endl;
-        return;
-    }
-
-    int windowSize = (hexagonCount < 18) ? hexagonCount : 18;
-    int values[18];
-    // Diziyi -1 ile başlat (Boş yerleri göstermemek için)
-    for (int i = 0; i < 18; i++) values[i] = -1;
-
-    Hexagon* current = windowStart;
-
-    for (int i = 0; i < windowSize; i++)
-    {
-        if (current->isEmpty())
-        {
-            values[i] = -2; // -2 = Var ama boş (^#)
-        }
-        else
-        {
-            // Her altıgen kendi değerini hesaplar.
-            values[i] = current->calculateSpecialDisplayValue();
-        }
-        current = current->getNext();
-    }
-
-    // --- GÖRSEL DÜZENLEME (ÇİZGİLER) ---
-    std::cout << "----------------------------------------------------" << std::endl;
-    std::cout << "Altigen sayisi: " << hexagonCount << std::endl;
-    std::cout << "----------------------------------------------------" << std::endl;
-
-    // --- 1. Satır (0..5) ---
-    for (int i = 0; i < 6; i++) {
-        if (values[i] == -2)      std::cout << "#\t";
-        else if (values[i] != -1) std::cout << values[i] << "\t";
-        else                      std::cout << " \t"; // Boşluk
-    }
-    std::cout << std::endl;
-
-    // --- 2. Satır (11..6) TERS YÖN ---
-    // Yılan kıvrımı: Sağdan sola doğru gitmeli.
-    for (int i = 11; i >= 6; i--) {
-        if (values[i] == -2)      std::cout << "#\t";
-        else if (values[i] != -1) std::cout << values[i] << "\t";
-        else                      std::cout << " \t";
-    }
-    std::cout << std::endl;
-
-    // --- 3. Satır (12..17) ---
-    for (int i = 12; i < 18; i++) {
-        if (values[i] == -2)      std::cout << "#\t";
-        else if (values[i] != -1) std::cout << values[i] << "\t";
-        else                      std::cout << " \t";
-    }
-    std::cout << std::endl;
-    std::cout << "----------------------------------------------------" << std::endl;
-}
-
-// Gerekirse kullanılmak üzere referans fonksiyon.
-int CircularHexagonList::findWindowMaxHeightRootValue(Hexagon* windowStart) const
-{
-    return 1;
-}
-
-// Eski snake yazdırma fonksiyonu.
-void CircularHexagonList::printAsSnake(int denominatorRoot) const
+// Her turda yapılacak işlemleri yöneten ana fonksiyonum.
+void CircularHexagonList::processTurn(int turnNumber)
 {
     if (head == 0 || hexagonCount == 0) return;
-    printWindowAsSnake(head);
+
+    // 1. Hazırlık: Verileri tutmak için geçici diziler oluşturdum.
+    int** dataBuffers = new int*[hexagonCount];
+    int* dataCounts = new int[hexagonCount];
+
+    for(int i = 0; i < hexagonCount; i++) {
+        dataBuffers[i] = 0;
+        dataCounts[i] = 0;
+    }
+
+    // 2. İşlem: Ağaçları çıkardım ve yerini doldurdum.
+    collectTreesAndReplace(turnNumber, dataBuffers, dataCounts);
+
+    // 3. İşlem: Verileri komşulara dağıttım.
+    distributeToNeighbors(dataBuffers, dataCounts);
+
+    // 4. Bitiş: Belleği temizledim.
+    cleanUpBuffers(dataBuffers, dataCounts, hexagonCount);
 }
+

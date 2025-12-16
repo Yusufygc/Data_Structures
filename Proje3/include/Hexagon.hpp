@@ -1,3 +1,17 @@
+/** * @file Hexagon.hpp
+* @description : Bu sınıf, projenin 'Öncelikli Kuyruk' (Priority Queue) yapısını temsil eden Altıgen düğümüdür.
+* Veri Yapısı Mantığı:
+* - Bu sınıf, bir 'Container' (Taşıyıcı) görevi görür ve içinde İkili Arama Ağaçlarını saklar.
+* - Bir veri yapısının Öncelikli Kuyruk sayılabilmesi için çıkarma işleminde en öncelikli elemanı vermesi gerekir.
+* - Bu sınıf, 'popPriorityTree' fonksiyonu ile içerisindeki ağaçlardan yüksekliği en fazla olanı (Öncelikli olanı)
+* bulup döndürdüğü için teknik olarak bir Öncelikli Kuyruk davranışı sergiler.
+* - Veri sayısı az (Max 6) olduğu için Heap yapısı yerine dizi üzerinde arama yöntemi tercih edilmiştir.
+* @course      : 1.Öğretim C grubu 
+* @assignment  : 2.Ödev
+* @date        : 03.12.2025-14.12.2025
+* @author      : Muhammed Yusuf YAĞCI B211210017
+*/
+
 #ifndef HEXAGON_HPP
 #define HEXAGON_HPP
 
@@ -6,46 +20,58 @@
 class Hexagon
 {
 private:
-    static const int MAX_TREES = 6;
+    static const int MAX_TREES = 6; // Kuyruğun maksimum kapasitesi.
 
-    BinarySearchTree* trees[MAX_TREES];
-    int treeCount;
-    int frontIndex; // Aslında popNormalTree'de kaydırma yaptığımız için hep 0 kabul edebiliriz.
+    BinarySearchTree* trees[MAX_TREES]; // Verileri (Ağaçları) tutan statik dizi.
+    int treeCount;  // Kuyruktaki mevcut eleman sayısı.
+    int frontIndex; // Kuyruğun başını temsil eder (FIFO mantığı için).
+    Hexagon* next;  // Dairesel listedeki sonraki düğüm.
 
-    Hexagon* next;
+    // --- YARDIMCI FONKSİYONLAR ---
+    
+    // Öncelikli Kuyruk mantığının kalbi:
+    // Mevcut ağaçlar arasında "Öncelik Skoru" (Yükseklik) en fazla olanın indeksini bulur.
+    int findMaxHeightTreeIndex() const;
+
+    // Ekrana yazılacak özel değeri hesaplayan yardımcı fonksiyon.
+    int getRawValueDivisor() const;
+
+    // Listeden eleman silme ve kaydırma işlemlerini yöneten fonksiyon.
+    BinarySearchTree* removeTreeAtIndex(int index);
 
 public:
-    Hexagon();
-    ~Hexagon();
+    Hexagon(); 
+    ~Hexagon(); 
 
+    // Kuyruk Doluluk/Boşluk kontrolleri
     bool isFull() const;
     bool isEmpty() const;
 
+    // Kuyruğa veri (Ağaç) ekleme (Enqueue işlemi).
     bool addTree(BinarySearchTree* tree);
     
-    // Normal kuyruk davranışı (index 0'ı çıkarır)
+    // Tek Turlarda: Normal Kuyruk (FIFO) mantığıyla eleman çıkarır (Dequeue).
     BinarySearchTree* popNormalTree();
 
-    // Öncelikli kuyruk davranışı (En yüksek ağacı bulur ve çıkarır)
+    // Çift Turlarda: Öncelikli Kuyruk (Priority Queue) mantığıyla eleman çıkarır.
+    // Yüksekliği en fazla olan ağacı tespit eder ve döndürür.
     BinarySearchTree* popPriorityTree();
 
-    // Belirli bir indisteki ağaca erişim
-    BinarySearchTree* getTreeAt(int index) const;
-    
-    // Elimizdeki veri dizisini (values), mevcut ağaçlara sırayla ekler.
+    // Çıkarılan bir ağacın verilerini, bu kuyruktaki ağaçlara sırayla dağıtır.
     void distributeValues(int* values, int count);
 
+    // Mevcut ağaç sayısını döndürür.
     int getTreeCount() const;
-    int getDisplayRootValue() const;
-
+    
+    // Bağlı Liste İşlemleri
     Hexagon* getNext() const;
+
+    // Sonraki altıgeni ayarlar.
     void setNext(Hexagon* nextHexagon);
 
-    // --- YENİ EKLENEN FONKSİYON ---
-    // Proje isterine göre o altıgenin ekrana basılacak değerini hesaplar.
+    // Görselleştirme için hesaplama fonksiyonu.
     int calculateSpecialDisplayValue() const;
 
-    void removeTreeAt(int index);
 };
 
 #endif
